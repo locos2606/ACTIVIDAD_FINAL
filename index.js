@@ -1,14 +1,14 @@
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
-const morgan = require('morgan'); // <--- AÑADIDO
+const morgan = require('morgan');
 
 const app = express();
 const port = 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev')); // <--- AÑADIDO
+app.use(morgan('dev'));
 
 const db = mysql.createConnection({
     host: 'localhost',
@@ -59,6 +59,10 @@ app.get('/tasks/:id', (req, res) => {
 
 app.post('/tasks', (req, res) => {
     const { title } = req.body;
+
+    // === ¡AQUÍ ESTÁ TU CAMBIO! ===
+    console.log('Nueva tarea recibida:', title);
+    // =============================
 
     if (!title) {
         return res.status(400).json({ error: 'El título (title) es requerido' });

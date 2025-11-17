@@ -35,8 +35,8 @@
         
         /* Estilo para el texto de la tarea */
         .task-text {
-            cursor: pointer; /* <--- NUEVO: Muestra una manito al pasar por encima */
-            flex-grow: 1; /* Ocupa el espacio disponible */
+            cursor: pointer;
+            flex-grow: 1; 
         }
 
         /* Clase que se aplica cuando la tarea está completada */
@@ -52,7 +52,7 @@
             padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
-            margin-left: 10px; /* Añadido para separar del texto */
+            margin-left: 10px;
         }
         .delete-btn:hover {
             background: #c0392b;
@@ -110,26 +110,23 @@
                 tasks.forEach(task => {
                     const li = document.createElement('li');
                     
-                    // Aplicar clase si está completada
                     if (task.completed) {
                         li.classList.add('completed');
                     }
                     
-                    // Texto de la tarea (ahora es un span clicable)
                     const taskText = document.createElement('span');
                     taskText.textContent = task.title;
-                    taskText.classList.add('task-text'); // <--- NUEVO
-                    
-                    // === INICIO DE CAMBIO IMPORTANTE ===
-                    // Añadimos evento de clic para ACTUALIZAR
+                    taskText.classList.add('task-text'); 
                     taskText.onclick = () => updateTask(task.id, task.completed); 
-                    // === FIN DE CAMBIO IMPORTANTE ===
 
-                    // Botón de eliminar
                     const deleteBtn = document.createElement('button');
                     deleteBtn.textContent = 'Eliminar';
                     deleteBtn.classList.add('delete-btn');
-                    deleteBtn.onclick = () => deleteTask(task.id); 
+                    
+                    // === CAMBIO AQUÍ ===
+                    // Ahora también pasamos el "task.title" a la función deleteTask
+                    deleteBtn.onclick = () => deleteTask(task.id, task.title); 
+                    // === FIN DEL CAMBIO ===
 
                     li.appendChild(taskText);
                     li.appendChild(deleteBtn);
@@ -163,10 +160,17 @@
         });
 
         // --- 3. ELIMINAR una tarea (DELETE) ---
-        async function deleteTask(id) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+        
+        // === CAMBIO AQUÍ (añadimos 'title' como parámetro) ===
+        async function deleteTask(id, title) { 
+            
+            // === CAMBIO AQUÍ (usamos el 'title' en el mensaje) ===
+            // (Asegúrate de usar las comillas invertidas `)
+            if (!confirm(`¿Estás seguro de que quieres eliminar la tarea: "${title}"?`)) {
                 return;
             }
+            // === FIN DE LOS CAMBIOS ===
+
             try {
                 const response = await fetch(`${API_URL}/${id}`, {
                     method: 'DELETE'
@@ -179,10 +183,8 @@
             }
         }
 
-        // === INICIO DE FUNCIÓN NUEVA ===
         // --- 4. ACTUALIZAR una tarea (PUT) ---
         async function updateTask(id, currentCompletedStatus) {
-            // Queremos enviar el estado *opuesto*
             const newCompletedStatus = !currentCompletedStatus; 
 
             try {
@@ -191,19 +193,16 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    // Enviamos solo el campo que queremos cambiar
                     body: JSON.stringify({ completed: newCompletedStatus }) 
                 });
 
                 if (response.ok) {
-                    getTasks(); // Recargar la lista para mostrar el cambio
+                    getTasks(); 
                 }
             } catch (error) {
                 console.error('Error al actualizar tarea:', error);
             }
         }
-        // === FIN DE FUNCIÓN NUEVA ===
-
 
         // --- Cargar las tareas cuando la página se abre por primera vez ---
         document.addEventListener('DOMContentLoaded', getTasks);
