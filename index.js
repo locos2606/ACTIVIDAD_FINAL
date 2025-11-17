@@ -1,25 +1,22 @@
-// 1. Importar las dependencias
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
+const morgan = require('morgan'); // <--- AÑADIDO
 
-// 2. Crear la aplicación de Express
 const app = express();
-const port = 3000; // Puedes usar cualquier puerto
+const port = 3000;
 
-// 3. Configurar middleware
-app.use(cors()); // Habilita CORS para todas las rutas
-app.use(express.json()); // Permite al servidor entender JSON
+app.use(cors());
+app.use(express.json());
+app.use(morgan('dev')); // <--- AÑADIDO
 
-// 4. Configurar la conexión a la base de datos MySQL
 const db = mysql.createConnection({
     host: 'localhost',
-    user: 'TU_USUARIO_MYSQL',     // <-- CAMBIA ESTO
-    password: 'TU_PASSWORD_MYSQL', // <-- CAMBIA ESTO
-    database: 'api_db'             // <-- CAMBIA ESTO (si usaste otro nombre)
+    user: 'root',
+    password: '',
+    database: 'api_db'
 });
 
-// Conectar a la base de datos
 db.connect((err) => {
     if (err) {
         console.error('Error al conectar a la base de datos:', err);
@@ -28,14 +25,10 @@ db.connect((err) => {
     console.log('Conectado exitosamente a la base de datos MySQL.');
 });
 
-// 5. Definir las rutas (Endpoints) de la API
-
-// RUTA RAÍZ (Prueba)
 app.get('/', (req, res) => {
     res.send('¡Hola! Esta es la API de tareas.');
 });
 
-// === METODO GET (Obtener todas las tareas) ===
 app.get('/tasks', (req, res) => {
     const sql = 'SELECT * FROM tasks';
     
@@ -48,9 +41,8 @@ app.get('/tasks', (req, res) => {
     });
 });
 
-// === METODO GET (Obtener una sola tarea por ID) ===
 app.get('/tasks/:id', (req, res) => {
-    const { id } = req.params; // Obtiene el ID de la URL
+    const { id } = req.params;
     const sql = 'SELECT * FROM tasks WHERE id = ?';
     
     db.query(sql, [id], (err, result) => {
@@ -61,13 +53,12 @@ app.get('/tasks/:id', (req, res) => {
         if (result.length === 0) {
             return res.status(404).json({ error: 'Tarea no encontrada' });
         }
-        res.json(result[0]); // Devuelve solo el primer resultado (el objeto)
+        res.json(result[0]);
     });
 });
 
-// === METODO POST (Crear una nueva tarea) ===
 app.post('/tasks', (req, res) => {
-    const { title } = req.body; // Obtiene el título del cuerpo de la petición
+    const { title } = req.body;
 
     if (!title) {
         return res.status(400).json({ error: 'El título (title) es requerido' });
@@ -80,22 +71,18 @@ app.post('/tasks', (req, res) => {
             console.error('Error al crear tarea:', err);
             return res.status(500).json({ error: 'Error interno del servidor' });
         }
-        // Devuelve el ID de la nueva tarea insertada
         res.status(201).json({ id: result.insertId, title: title, completed: false });
     });
 });
 
-// === METODO PUT (Actualizar una tarea existente) ===
 app.put('/tasks/:id', (req, res) => {
     const { id } = req.params;
     const { title, completed } = req.body;
 
-    // Verifica que al menos uno de los campos esté presente
     if (title === undefined && completed === undefined) {
         return res.status(400).json({ error: 'Se requiere al menos un campo (title o completed) para actualizar' });
     }
 
-    // Construye la consulta dinámicamente
     let sql = 'UPDATE tasks SET ';
     const params = [];
 
@@ -105,7 +92,7 @@ app.put('/tasks/:id', (req, res) => {
     }
 
     if (completed !== undefined) {
-        if (params.length > 0) sql += ', '; // Agrega coma si ya hay otro campo
+        if (params.length > 0) sql += ', ';
         sql += 'completed = ?';
         params.push(completed);
     }
@@ -125,7 +112,6 @@ app.put('/tasks/:id', (req, res) => {
     });
 });
 
-// === METODO DELETE (Eliminar una tarea) ===
 app.delete('/tasks/:id', (req, res) => {
     const { id } = req.params;
     const sql = 'DELETE FROM tasks WHERE id = ?';
@@ -142,8 +128,6 @@ app.delete('/tasks/:id', (req, res) => {
     });
 });
 
-
-// 6. Iniciar el servidor
 app.listen(port, () => {
     console.log(`Servidor corriendo en http://localhost:${port}`);
 });

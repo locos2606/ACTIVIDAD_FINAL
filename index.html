@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tareas (Frontend)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Estilo para el texto de la tarea */
+        .task-text {
+            cursor: pointer; /* <--- NUEVO: Muestra una manito al pasar por encima */
+            flex-grow: 1; /* Ocupa el espacio disponible */
+        }
+
+        /* Clase que se aplica cuando la tarea está completada */
+        li.completed .task-text {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px; /* Añadido para separar del texto */
+        }
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        form {
+            display: flex;
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button[type="submit"] {
+            padding: 10px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            margin-left: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button[type="submit"]:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mi Lista de Tareas</h1>
+    
+    <form id="taskForm">
+        <input type="text" id="taskTitle" placeholder="Escribe una nueva tarea..." required>
+        <button type="submit">Agregar</button>
+    </form>
+
+    <ul id="taskList">
+        </ul>
+
+    <script>
+        const API_URL = 'http://localhost:3000/tasks';
+        const taskList = document.getElementById('taskList');
+        const taskForm = document.getElementById('taskForm');
+        const taskTitleInput = document.getElementById('taskTitle');
+
+        // --- 1. OBTENER Y MOSTRAR todas las tareas (GET) ---
+        async function getTasks() {
+            try {
+                const response = await fetch(API_URL);
+                const tasks = await response.json();
+                
+                taskList.innerHTML = ''; 
+
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    
+                    // Aplicar clase si está completada
+                    if (task.completed) {
+                        li.classList.add('completed');
+                    }
+                    
+                    // Texto de la tarea (ahora es un span clicable)
+                    const taskText = document.createElement('span');
+                    taskText.textContent = task.title;
+                    taskText.classList.add('task-text'); // <--- NUEVO
+                    
+                    // === INICIO DE CAMBIO IMPORTANTE ===
+                    // Añadimos evento de clic para ACTUALIZAR
+                    taskText.onclick = () => updateTask(task.id, task.completed); 
+                    // === FIN DE CAMBIO IMPORTANTE ===
+
+                    // Botón de eliminar
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Eliminar';
+                    deleteBtn.classList.add('delete-btn');
+                    deleteBtn.onclick = () => deleteTask(task.id); 
+
+                    li.appendChild(taskText);
+                    li.appendChild(deleteBtn);
+                    taskList.appendChild(li);
+                });
+
+            } catch (error) {
+                console.error('Error al obtener tareas:', error);
+            }
+        }
+
+        // --- 2. CREAR una nueva tarea (POST) ---
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const title = taskTitleInput.value;
+            if (!title) return;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title })
+                });
+                if (response.ok) {
+                    taskTitleInput.value = ''; 
+                    getTasks(); 
+                }
+            } catch (error) {
+                console.error('Error al crear tarea:', error);
+            }
+        });
+
+        // --- 3. ELIMINAR una tarea (DELETE) ---
+        async function deleteTask(id) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    getTasks(); 
+                }
+            } catch (error) {
+                console.error('Error al eliminar tarea:', error);
+            }
+        }
+
+        // === INICIO DE FUNCIÓN NUEVA ===
+        // --- 4. ACTUALIZAR una tarea (PUT) ---
+        async function updateTask(id, currentCompletedStatus) {
+            // Queremos enviar el estado *opuesto*
+            const newCompletedStatus = !currentCompletedStatus; 
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // Enviamos solo el campo que queremos cambiar
+                    body: JSON.stringify({ completed: newCompletedStatus }) 
+                });
+
+                if (response.ok) {
+                    getTasks(); // Recargar la lista para mostrar el cambio
+                }
+            } catch (error) {
+                console.error('Error al actualizar tarea:', error);
+            }
+        }
+        // === FIN DE FUNCIÓN NUEVA ===
+
+
+        // --- Cargar las tareas cuando la página se abre por primera vez ---
+        document.addEventListener('DOMContentLoaded', getTasks);
+
+    </script>
+</body>
+</html>
